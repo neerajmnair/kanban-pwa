@@ -1,0 +1,42 @@
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env/
+
+# =========================
+# FastAPI / Python tools
+# =========================
+*.sqlite3
+*.log
+
+# =========================
+# Node / frontend (future-safe)
+# =========================
+node_modules/
+dist/
+build/
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local
+.env.production
