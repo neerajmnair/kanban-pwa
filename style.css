@@ -51,3 +51,13 @@ h1 {
 .add-btn:hover {
   background: #b7d930;
 }
+.task {
+  background: #e0e0e0;
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+}
+.task button {
+  margin-left: 5px;
+  cursor: pointer;
+}
