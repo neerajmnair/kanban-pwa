@@ -1,3 +1,10 @@
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/service-worker.js")
+    .then(() => console.log("Service Worker registered"))
+    .catch(err => console.error("SW registration failed:", err));
+}
+
 const board = {
   todo: [],
   inProgress: [],
@@ -34,22 +41,6 @@ function deleteTask(column, index) {
 }
 
 
-
-
-/*function render() {
-  for (let column in board) {
-    const container = document.getElementById(column);
-    container.innerHTML = "";
-
-    board[column].forEach(task => {
-      const div = document.createElement("div");
-      div.className = "task";
-      div.innerText = task;
-
-      container.appendChild(div);
-    });
-  }
-}*/
 function render() {
   for (let column in board) {
     const container = document.getElementById(column);
