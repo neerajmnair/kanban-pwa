@@ -3,14 +3,23 @@ let db;
 
 
 function openDB() {
-    console.log("openDB called");
+    
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("kanbanDB", 1);
+    const request = indexedDB.open("kanbanDB", 2);
 
-    request.onupgradeneeded = event => {
-      db = event.target.result;
-      db.createObjectStore("board", { keyPath: "id" });
-    };
+  request.onupgradeneeded = event => {
+  db = event.target.result;
+
+  if (!db.objectStoreNames.contains("board")) {
+    db.createObjectStore("board", { keyPath: "id" });
+  }
+
+  if (!db.objectStoreNames.contains("actions")) {
+    db.createObjectStore("actions", {
+      autoIncrement: true
+    });
+  }
+};
 
     request.onsuccess = event => {
       db = event.target.result;
@@ -54,10 +63,24 @@ function loadBoard() {
   });
 }
 
+async function queueAction(action) {
+  await dbReady; // ⬅️ THIS IS THE FIX
 
-if ("serviceWorker" in navigator) {
+  const tx = db.transaction("actions", "readwrite");
+  const store = tx.objectStore("actions");
+
+  store.add({
+    ...action,
+    timestamp: Date.now()
+  });
+}
+
+
+
+
+if ("serviceWorker" in navigator) { //ensures browser supports service worker
   navigator.serviceWorker
-    .register("/service-worker.js")
+    .register("/service-worker.js") //tells browser to install sw
     .then(() => console.log("Service Worker registered"))
     .catch(err => console.error("SW registration failed:", err));
 }
@@ -75,9 +98,15 @@ function addTask(column) {
   if (!text) return;
 
   board[column].push(text);
-  saveBoard();
-  render();
+  render();        // UI first
+
+  saveBoard();     // persist state
+  queueAction({    // record action
+    type: "ADD_TASK",
+    payload: { column, text }
+  });
 }
+
 
 function moveTask(column, index, direction) {
   const currentIndex = columns.indexOf(column);
@@ -87,16 +116,30 @@ function moveTask(column, index, direction) {
   const task = board[column].splice(index, 1)[0];
   board[newColumn].push(task);
 
+  queueAction({
+    type: "MOVE_TASK",
+    payload: { from: column, to: newColumn, task }
+  });
+
   saveBoard();
   render();
 }
+
 
 
 function deleteTask(column, index) {
+  const task = board[column][index];
   board[column].splice(index, 1);
+
+  queueAction({
+    type: "DELETE_TASK",
+    payload: { column, task }
+  });
+
   saveBoard();
   render();
 }
+
 
 
 
@@ -106,7 +149,8 @@ function render() {
     container.innerHTML = "";
 
     board[column].forEach((task, index) => {
-      const div = document.createElement("div");
+
+      const div = document.createElement("div");// to represent the task box
       div.className = "task";
       div.innerText = task;
 
@@ -115,7 +159,7 @@ function render() {
         const leftBtn = document.createElement("button");
         leftBtn.innerText = "←";
         leftBtn.onclick = () => moveTask(column, index, -1);
-        div.appendChild(leftBtn);
+        div.appendChild(leftBtn);//creates the button inside the div
       }
 
       // Move right
