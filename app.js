@@ -5,10 +5,10 @@ let db;
 function openDB() {
     
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("kanbanDB", 2);
+    const request = indexedDB.open("kanbanDB", 2);// opens a database for the app
 
-  request.onupgradeneeded = event => {
-  db = event.target.result;
+  request.onupgradeneeded = event => { //runs when DB created for the ifrst time or when version number changes
+  db = event.target.result;//the opened DB
 
   if (!db.objectStoreNames.contains("board")) {
     db.createObjectStore("board", { keyPath: "id" });
@@ -34,7 +34,7 @@ function openDB() {
 }
 const dbReady = openDB();   
 
-async function saveBoard() {
+async function saveBoard() { //done after every state change
   await dbReady;
 
   const tx = db.transaction("board", "readwrite");
@@ -48,7 +48,7 @@ async function saveBoard() {
 
 
 
-function loadBoard() {
+function loadBoard() { // loads saved state when app starts
   return new Promise(resolve => {
     const tx = db.transaction("board", "readonly");
     const store = tx.objectStore("board");
@@ -64,7 +64,7 @@ function loadBoard() {
 }
 
 async function queueAction(action) {
-  await dbReady; // ⬅️ THIS IS THE FIX
+  await dbReady; 
 
   const tx = db.transaction("actions", "readwrite");
   const store = tx.objectStore("actions");
@@ -74,6 +74,52 @@ async function queueAction(action) {
     timestamp: Date.now()
   });
 }
+function getAllActions() {
+  return new Promise(async resolve => {
+    await dbReady;
+
+    const tx = db.transaction("actions", "readonly");
+    const store = tx.objectStore("actions");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+  });
+}
+function clearActions() {
+  const tx = db.transaction("actions", "readwrite");
+  tx.objectStore("actions").clear();
+}
+async function syncActions() {
+  if (!navigator.onLine) return;
+
+  const actions = await getAllActions();
+  if (actions.length === 0) return;
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(actions)
+    });
+
+    if (response.ok) {
+      clearActions();
+      console.log("Actions synced successfully");
+    }
+  } catch (err) {
+    console.log("Sync failed, will retry later");
+  }
+}
+window.addEventListener("online", () => {
+  console.log("Back online — syncing actions");
+  syncActions();
+});
+
+
 
 
 
@@ -180,12 +226,18 @@ function render() {
     });
   }
 }
+async function initApp() {
+  await dbReady;     // wait for IndexedDB
+  await loadBoard(); // restore saved state
+  render();          // render UI
+}
 
-dbReady.then(() => {
-  loadBoard().then(() => {
-    render();
-  });
+initApp();
+
+window.addEventListener("load", () => {
+  syncActions();
 });
+
 
 
 
