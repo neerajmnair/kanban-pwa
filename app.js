@@ -48,7 +48,8 @@ async function saveBoard() { //done after every state change
 
 
 
-function loadBoard() { // loads saved state when app starts
+async function loadBoard() { // loads saved state when app starts
+  await dbReady;
   return new Promise(resolve => {
     const tx = db.transaction("board", "readonly");
     const store = tx.objectStore("board");
@@ -139,14 +140,14 @@ const board = {
 
 const columns = ["todo", "inProgress", "done"];
 
-function addTask(column) {
+async function addTask(column) {
   const text = prompt("Enter task");
   if (!text) return;
 
   board[column].push(text);
-  render();        // UI first
+  await saveBoard();
+  render();        
 
-  saveBoard();     // persist state
   queueAction({    // record action
     type: "ADD_TASK",
     payload: { column, text }
@@ -154,7 +155,7 @@ function addTask(column) {
 }
 
 
-function moveTask(column, index, direction) {
+async function moveTask(column, index, direction) {
   const currentIndex = columns.indexOf(column);
   const newColumn = columns[currentIndex + direction];
   if (!newColumn) return;
@@ -167,13 +168,13 @@ function moveTask(column, index, direction) {
     payload: { from: column, to: newColumn, task }
   });
 
-  saveBoard();
+  await saveBoard();
   render();
 }
 
 
 
-function deleteTask(column, index) {
+async function deleteTask(column, index) {
   const task = board[column][index];
   board[column].splice(index, 1);
 
@@ -182,7 +183,7 @@ function deleteTask(column, index) {
     payload: { column, task }
   });
 
-  saveBoard();
+  await saveBoard();
   render();
 }
 
